@@ -66,7 +66,14 @@ class Block:
     def mine(self):
         # TODO: Implement mining
         # Hint: Increment nonce until hash() returns a value <= DIFFICULTY
-        pass
+        # pass
+        nonce = 0
+        while True : 
+            self.nonce = nonce.to_bytes(8, byteorder='big').hex()
+            chk = int(self.hash(),16)
+            if chk<=DIFFICULTY:
+                break
+            nonce+=1
 
     # Hash the block header (prev + merkle_root + nonce)
     def hash(self) -> str:
