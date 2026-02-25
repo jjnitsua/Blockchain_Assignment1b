@@ -4,7 +4,7 @@ from typing import List
 from script import Script, sha256_hash, OP_DUP, OP_SHA256, OP_EQUALVERIFY, OP_CHECKSIG
 
 DIFFICULTY = 0x07FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-BLOCK_REWARD = 50  # Coinbase reward for mining a block (in satoshis)
+BLOCK_REWARD = 50  #  
 
 """
 Core transaction data structures for the blockchain with Bitcoin Script support.
@@ -41,7 +41,8 @@ class Output:
     def to_bytes(self) -> bytes:
         """Serialize the output to bytes."""
         # TODO: Serialize value (4 bytes, big-endian) + script_pubkey bytes
-        pass
+        transaction_bytes = self.value.to_bytes(4, byteorder='big') + self.script_pubkey.to_bytes()
+        return transaction_bytes
 
 
 class Input:
@@ -86,7 +87,8 @@ class Transaction:
     def get_hash(self) -> str:
         """Compute the SHA256 hash of the serialized transaction."""
         # TODO: Compute and return the SHA256 hash (hex string) of self.to_bytes()
-        pass
+        transaction_bytes = self.to_bytes()
+        return hashlib.sha256(bytes.fromhex(transaction_bytes)).hexdigest()
 
     @staticmethod
     def coinbase(miner_pub_key: str, reward: int = BLOCK_REWARD) -> 'Transaction':

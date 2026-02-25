@@ -93,7 +93,7 @@ class Script:
         - Opcodes are encoded as their string representation (UTF-8)
         - Data elements (hex strings) are converted to bytes
         """
-        serialized_script = ""
+        serialized_script = b""
 
         for i in self.elements:
             if i in OPCODES:
