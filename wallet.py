@@ -34,4 +34,41 @@ def build_transaction(inputs: List[Input], outputs: List[Output], signing_key: S
     """
     # TODO: Implement build_transaction
     # Hint: Use Script.p2pkh_unlocking_script(signature, pub_key) for scriptSig
-    pass
+    
+
+    input_sum = 0
+    output_sum = 0
+
+    for i in inputs:
+        if i.output.value != 0:
+            input_sum += i.output.value
+            public_key_bytes = signing_key.verify_key.encode(HexEncoder)
+            if(bytes.fromhex(i.output.script_pubkey.elements[2]) == sha256_hash(public_key_bytes)):
+                continue
+        else:
+            return None
+        
+    for i in outputs:
+        if i.value != 0:
+            output_sum += i.value
+            continue
+        else:
+            return None
+        
+    if input_sum != output_sum:
+        return None
+    
+
+    new_transaction = Transaction(inputs, outputs)  # Note: needs empty scriptSigs initially
+
+    for i in new_transaction.inputs:
+        tx_data = bytes.fromhex(new_transaction.bytes_to_sign())
+        signature_bytes = signing_key.sign(tx_data, encoder=HexEncoder)
+        pubkey_bytes = signing_key.verify_key.encode(HexEncoder)
+        
+        signature_hex = signature_bytes.decode()  # or signature_bytes.hex()
+        pubkey_hex = pubkey_bytes.hex()
+        
+        i.script_sig = Script.p2pkh_unlocking_script(signature_hex, pubkey_hex)
+
+    return new_transaction
