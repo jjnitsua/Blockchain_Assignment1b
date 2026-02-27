@@ -284,9 +284,9 @@ class Node:
             if not found:
                 return False
 
-            signature = bytes.fromhex(input.script_sig.elements[0])
-            pubkey = bytes.fromhex(input.script_sig.elements[1])
-            expected_hash = bytes.fromhex(input.output.script_pubkey.elements[2])
+            signature = bytes.fromhex(inp.script_sig.elements[0])
+            pubkey = bytes.fromhex(inp.script_sig.elements[1])
+            expected_hash = bytes.fromhex(inp.output.script_pubkey.elements[2])
 
             if not verify_p2pkh(signature,pubkey,expected_hash,tx_data):
                 return False

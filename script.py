@@ -173,7 +173,35 @@ class ScriptInterpreter:
         # TODO: Implement script execution
         # Hint: Loop through script.elements, check if each is an opcode or data
         # Use try/except to catch errors and return False
-        pass
+        # pass
+        try:
+            for element in script.elements:
+                if element == OP_DUP:
+                    self._op_dup()
+
+                elif element==OP_SHA256:
+                    self._op_sha256()
+
+                elif element==OP_EQUALVERIFY:
+                    if not self._op_equalverify():
+                        return False
+                
+                elif element==OP_CHECKSIG:
+                    self._op_checksig(tx_data)
+
+                else :
+                    self.stack.append(bytes.fromhex(element))
+
+            if len(self.stack) == 0:
+                return False
+
+            if self.stack[-1] == b'\x00':
+                return False
+
+            return True
+        
+        except Exception:
+            return False
 
     def _op_dup(self):
         """
@@ -182,7 +210,8 @@ class ScriptInterpreter:
         Stack: [..., a] -> [..., a, a]
         """
         # TODO: Implement OP_DUP
-        pass
+        # pass
+        self.stack.append(self.stack[-1])
 
     def _op_sha256(self):
         """
@@ -191,7 +220,10 @@ class ScriptInterpreter:
         Stack: [..., data] -> [..., sha256(data)]
         """
         # TODO: Implement OP_SHA256
-        pass
+        # pass
+        top=self.stack.pop()
+        hashed=sha256_hash(top)
+        self.stack.append(hashed)
 
     def _op_equalverify(self) -> bool:
         """
@@ -203,7 +235,10 @@ class ScriptInterpreter:
         Note: This operation removes both elements from the stack.
         """
         # TODO: Implement OP_EQUALVERIFY
-        pass
+        # pass
+        l1=self.stack.pop()
+        l2=self.stack.pop()
+        return l1==l2
 
     def _op_checksig(self, tx_data: bytes):
         """
@@ -217,4 +252,11 @@ class ScriptInterpreter:
         Hint: Use VerifyKey from nacl.signing to verify the signature.
         """
         # TODO: Implement OP_CHECKSIG
-        pass
+        # pass
+        pkey=self.stack.pop()
+        sig=self.stack.pop()
+        try:
+            VerifyKey(pkey).verify(tx_data, sig)
+            self.stack.append(b'\x01')  # success — push "true"
+        except BadSignatureError:
+            self.stack.append(b'\x00')
