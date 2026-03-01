@@ -158,12 +158,10 @@ class Node:
         if isinstance(txs, Transaction):
             txs = [txs]
         
-        longest_chain=None
-        longest_length=0
         for indi_chain in self.chains:
-            if len(indi_chain.chain)>longest_length:
-                longest_chain=indi_chain
-                longest_lenth=len(indi_chain.chain)
+            if len(indi_chain.chain) > longest_length:
+                longest_chain = indi_chain
+                longest_length = len(indi_chain.chain)
 
         #incase one of the transactions in between is invalide we would have already changed the data hence creating copy
         temp_utxos = [utxo.copy() for utxo in longest_chain.utxos]
