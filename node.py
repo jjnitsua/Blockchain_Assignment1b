@@ -175,10 +175,7 @@ class Node:
         for i in range(len(txs)):
             tx=txs[i]
         
-            if i==0:
-                is_coinbase_allowed=True
-            else:
-                is_coinbase_allowed=False
+            is_coinbase_allowed = (i == 0)
         
             
             if not self.is_transaction_valid(tx, temp_chain, is_coinbase_allowed):
@@ -260,30 +257,32 @@ class Node:
                 return False
             else:
                 return True
+            
+        
 
-        # if not a coinbase transaction there must be some input that is spent
+        
         if not tx.inputs or not tx.outputs:
             return False
         
-        # checking for double spend problem within the same transaction
-        seen_inputs=[]
+        
+        seen = set()
         for inp in tx.inputs:
-            for s in seen_inputs:
-                if inp.tx_hash == s.tx_hash and inp.output is s.output:
-                    return False
-            seen_inputs.append(inp)
+            key = (inp.tx_hash, inp.output_index)
+            if key in seen:
+                return False
+            seen.add(key)
 
-        # checking signatures and if input total is euqal to output total
+        
         input_total=0
         tx_data=bytes.fromhex(tx.bytes_to_sign())
-        #going through every input 
+         
         for inp in tx.inputs:
             found=False
             for utxo in blockchain.utxos:
                 if utxo['tx_hash'] == inp.tx_hash and utxo['output_index'] == inp.output_index:
                     found = True
                     break
-                #we can break as soon as we find corresponding utxo for the input
+                
             if not found:
                 return False
 
@@ -314,14 +313,13 @@ class Node:
         """
         # TODO: Implement UTXO updates
         # pass
-        # going through each input and remove the corresponding utxo
+        
         for inp in tx.inputs:
             for utxo in blockchain.utxos:
-                if utxo['tx_hash'] == inp.tx_hash and utxo['output'] is inp.output:
+                if utxo['tx_hash'] == inp.tx_hash and utxo['output_index'] == inp.output_index:
                     blockchain.utxos.remove(utxo)
-                    break 
-                    # we can break because there will only be one utxo for an input hence looping after this will be pointless
-        # adding new utxos for the ouputs in the transaction
+                    break
+                    
         for i, output in enumerate(tx.outputs):
             blockchain.utxos.append({'tx_hash': tx.tx_hash, 'output_index': i, 'output': output})
             
