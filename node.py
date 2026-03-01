@@ -158,12 +158,17 @@ class Node:
         if isinstance(txs, Transaction):
             txs = [txs]
         
+        if not self.chains: 
+            return None
+            
+        longest_chain = None  
+        longest_length = 0
         for indi_chain in self.chains:
             if len(indi_chain.chain) > longest_length:
                 longest_chain = indi_chain
                 longest_length = len(indi_chain.chain)
 
-        #incase one of the transactions in between is invalide we would have already changed the data hence creating copy
+        
         temp_utxos = [utxo.copy() for utxo in longest_chain.utxos]
         temp_chain = Blockchain(chain=longest_chain.chain.copy(), utxos=temp_utxos)
 
@@ -175,7 +180,7 @@ class Node:
             else:
                 is_coinbase_allowed=False
         
-            #Checking if each transaction is valide
+            
             if not self.is_transaction_valid(tx, temp_chain, is_coinbase_allowed):
                 return None
         
@@ -275,8 +280,8 @@ class Node:
         for inp in tx.inputs:
             found=False
             for utxo in blockchain.utxos:
-                if utxo['tx_hash']==inp.tx_hash and utxo['output'] is inp.output:
-                    found=True
+                if utxo['tx_hash'] == inp.tx_hash and utxo['output_index'] == inp.output_index:
+                    found = True
                     break
                 #we can break as soon as we find corresponding utxo for the input
             if not found:
