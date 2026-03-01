@@ -36,39 +36,44 @@ def build_transaction(inputs: List[Input], outputs: List[Output], signing_key: S
     # Hint: Use Script.p2pkh_unlocking_script(signature, pub_key) for scriptSig
     
 
-    input_sum = 0
-    output_sum = 0
-
-    for i in inputs:
-        if i.output.value != 0:
-            input_sum += i.output.value
-            public_key_bytes = signing_key.verify_key.encode(HexEncoder)
-            if(bytes.fromhex(i.output.script_pubkey.elements[2]) == sha256_hash(public_key_bytes)):
-                continue
-        else:
+    def build_transaction(inputs: List[Input], outputs: List[Output], signing_key: SigningKey) -> Optional[Transaction]:
+        if not inputs or not outputs:
             return None
         
-    for i in outputs:
-        if i.value != 0:
-            output_sum += i.value
-            continue
-        else:
+        
+        input_sum = sum(inp.output.value for inp in inputs)
+        output_sum = sum(out.value for out in outputs)
+        if input_sum != output_sum:
             return None
         
-    if input_sum != output_sum:
-        return None
-    
-
-    new_transaction = Transaction(inputs, outputs)  # Note: needs empty scriptSigs initially
-
-    for i in new_transaction.inputs:
-        tx_data = bytes.fromhex(new_transaction.bytes_to_sign())
-        signature_bytes = signing_key.sign(tx_data, encoder=HexEncoder)
+        
         pubkey_bytes = signing_key.verify_key.encode(HexEncoder)
+        pubkey_hash = sha256_hash(pubkey_bytes)
+        for inp in inputs:
+            if bytes.fromhex(inp.output.script_pubkey.elements[2]) != pubkey_hash:
+                return None
         
-        signature_hex = signature_bytes.decode()  # or signature_bytes.hex()
-        pubkey_hex = pubkey_bytes.hex()
         
-        i.script_sig = Script.p2pkh_unlocking_script(signature_hex, pubkey_hex)
+        unsigned_inputs = []
+        for inp in inputs:
+            unsigned_inputs.append(Input(inp.output, inp.tx_hash, inp.output_index, Script([])))
+        
+        
+        unsigned_tx = Transaction(unsigned_inputs, outputs)
+        
+        
+        signed_inputs = []
+        for orig_inp in inputs:
+            
+            tx_data = bytes.fromhex(unsigned_tx.bytes_to_sign())
+            signature_bytes = signing_key.sign(tx_data, encoder=HexEncoder)
+            signature_hex = signature_bytes.signature.hex()  
+            
+            pubkey_hex = pubkey_bytes.hex()
+            script_sig = Script.p2pkh_unlocking_script(signature_hex, pubkey_hex)
+            
+            signed_inputs.append(Input(orig_inp.output, orig_inp.tx_hash, orig_inp.output_index, script_sig))
+        
+        
+        return Transaction(signed_inputs, outputs)
 
-    return new_transaction
