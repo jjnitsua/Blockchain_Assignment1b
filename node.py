@@ -245,26 +245,26 @@ class Node:
         # Hint: Use verify_p2pkh(signature, pubkey, expected_hash, tx_data)
         # pass
 
+        # --- Coinbase ---
         if tx.is_coinbase():
             if not is_coinbase_allowed:
                 return False
-            
-            total_output=0
-            for output in tx.outputs:
-                total_output+=output.value
 
-            if total_output>BLOCK_REWARD:
+            if tx.inputs:
                 return False
-            else:
-                return True
-            
-        
+
+            total_output = sum(output.value for output in tx.outputs)
+            if total_output > BLOCK_REWARD:
+                return False
+
+            return True
 
         
+
         if not tx.inputs or not tx.outputs:
             return False
-        
-        
+
+       
         seen = set()
         for inp in tx.inputs:
             key = (inp.tx_hash, inp.output_index)
@@ -272,37 +272,37 @@ class Node:
                 return False
             seen.add(key)
 
-        
-        input_total=0
-        tx_data=bytes.fromhex(tx.bytes_to_sign())
-         
+        input_total = 0
+        tx_data = bytes.fromhex(tx.bytes_to_sign())
+
         for inp in tx.inputs:
-            found=False
+            matched_utxo = None
+
             for utxo in blockchain.utxos:
                 if utxo['tx_hash'] == inp.tx_hash and utxo['output_index'] == inp.output_index:
-                    found = True
+                    matched_utxo = utxo
                     break
-                
-            if not found:
+
+            if not matched_utxo:
                 return False
+
+            output = matched_utxo['output']
 
             signature = bytes.fromhex(inp.script_sig.elements[0])
             pubkey = bytes.fromhex(inp.script_sig.elements[1])
-            expected_hash = bytes.fromhex(inp.output.script_pubkey.elements[2])
+            expected_hash = bytes.fromhex(output.script_pubkey.elements[2])
 
-            if not verify_p2pkh(signature,pubkey,expected_hash,tx_data):
+            if not verify_p2pkh(signature, pubkey, expected_hash, tx_data):
                 return False
-            
-            input_total+=inp.output.value
 
-        output_total=0
-        for o in tx.outputs:
-            output_total += o.value
+            input_total += output.value
 
-        if input_total == output_total:
-            return True
-        else:
+        output_total = sum(o.value for o in tx.outputs)
+
+        if input_total < output_total:
             return False
+
+        return True
 
     def update_utxos(self, blockchain: Blockchain, tx: Transaction):
         """
@@ -314,14 +314,22 @@ class Node:
         # TODO: Implement UTXO updates
         # pass
         
-        for inp in tx.inputs:
-            for utxo in blockchain.utxos:
-                if utxo['tx_hash'] == inp.tx_hash and utxo['output_index'] == inp.output_index:
-                    blockchain.utxos.remove(utxo)
-                    break
-                    
+        blockchain.utxos = [
+            utxo for utxo in blockchain.utxos
+            if not any(
+                utxo['tx_hash'] == inp.tx_hash and
+                utxo['output_index'] == inp.output_index
+                for inp in tx.inputs
+            )
+        ]
+
+        
         for i, output in enumerate(tx.outputs):
-            blockchain.utxos.append({'tx_hash': tx.tx_hash, 'output_index': i, 'output': output})
+            blockchain.utxos.append({
+                'tx_hash': tx.tx_hash,
+                'output_index': i,
+                'output': output
+            })
             
     def verify_pow(self, block: Block) -> bool:
         """Verify proof of work meets difficulty requirement."""
