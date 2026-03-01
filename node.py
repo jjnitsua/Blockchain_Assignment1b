@@ -157,35 +157,26 @@ class Node:
         # pass
         if isinstance(txs, Transaction):
             txs = [txs]
-        
-        if not self.chains: 
-            return None
-            
-        longest_chain = None  
-        longest_length = 0
-        for indi_chain in self.chains:
-            if len(indi_chain.chain) > longest_length:
-                longest_chain = indi_chain
-                longest_length = len(indi_chain.chain)
 
-        
-        temp_utxos = [utxo.copy() for utxo in longest_chain.utxos]
+        if not self.chains:
+            return None
+
+        longest_chain = max(self.chains, key=lambda c: len(c.chain))
+
+        import copy
+        temp_utxos = copy.deepcopy(longest_chain.utxos)
         temp_chain = Blockchain(chain=longest_chain.chain.copy(), utxos=temp_utxos)
 
-        for i in range(len(txs)):
-            tx=txs[i]
-        
+        for i, tx in enumerate(txs):
             is_coinbase_allowed = (i == 0)
-        
-            
+
             if not self.is_transaction_valid(tx, temp_chain, is_coinbase_allowed):
                 return None
-        
-            self.update_utxos(temp_chain,tx)
 
-        last_block=longest_chain.chain[-1]
-        prev_hash=last_block.hash()
-        block=Block(prev_hash,txs,None)
+            self.update_utxos(temp_chain, tx)
+
+        prev_hash = longest_chain.chain[-1].hash()
+        block = Block(prev_hash, txs, None)
         block.mine()
 
         return block
